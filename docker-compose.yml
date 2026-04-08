@@ -1,33 +1,13 @@
 version: "3.8"
-
 services:
-  mongodb:
-    image: mongo:7
-    container_name: firewatch-mongo
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    volumes:
-      - firewatch_mongo_data:/data/db
-    networks:
-      - firewatch-net
-
   backend:
     build: ./backend
-    container_name: firewatch-backend
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    env_file:
-      - ./backend/.env
+    ports: ["8000:8000"]
     environment:
-      - MONGODB_URL=mongodb://mongodb:27017
-      - MONGODB_DB=firewatch
-    volumes:
-      - ./backend/uploads:/app/uploads
-      - ./backend/models:/app/models
-    depends_on:
-      - mongodb
+      - MONGODB_URI=mongodb://mongo:27017/fire_smoke_detector
+      - JWT_SECRET=change-in-production
+      - CORS_ORIGINS=http://localhost:3000
+    depends_on: [mongo]
     deploy:
       resources:
         reservations:
@@ -35,23 +15,19 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    networks:
-      - firewatch-net
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
-    container_name: firewatch-frontend
+    ports: ["3000:3000"]
+    depends_on: [backend]
     restart: unless-stopped
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
-    networks:
-      - firewatch-net
+
+  mongo:
+    image: mongo:7
+    ports: ["27017:27017"]
+    volumes: [mongo_data:/data/db]
+    restart: unless-stopped
 
 volumes:
-  firewatch_mongo_data:
-
-networks:
-  firewatch-net:
-    driver: bridge
+  mongo_data:
